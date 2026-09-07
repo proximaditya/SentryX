@@ -204,11 +204,11 @@ export default function SettingsPage() {
                 <div className="endpoint-details">
                   <div className="endpoint-header">
                     <b>/api/v1/analytics/full</b>
-                    <span className="tag">Master Pipeline</span>
+                    <span className="tag">Master Pipeline v2.0</span>
                   </div>
                   <div className="endpoint-url font-mono">{fullPipelineEndpoint}</div>
                   <p className="endpoint-sub">
-                    YOLOv8 multi-class detection, ByteTrack tracking, ANPR OCR, virtual fence & tripwire vector geometry checks.
+                    YOLO11n lightweight multi-class tracking, ByteTrack temporal identities, virtual fence polygon & demarcation tripwire vector geometry checks with 2x frame stride and ultrafast H.264 streaming.
                   </p>
                 </div>
                 <button
@@ -218,28 +218,6 @@ export default function SettingsPage() {
                   title="Copy Full URL"
                 >
                   {copiedEndpoint === 'full' ? 'Copied ✓' : 'Copy'}
-                </button>
-              </div>
-
-              <div className="endpoint-item">
-                <div className="endpoint-badge post">POST</div>
-                <div className="endpoint-details">
-                  <div className="endpoint-header">
-                    <b>/api/v1/analytics/anpr</b>
-                    <span className="tag tag-accent">Dedicated ANPR</span>
-                  </div>
-                  <div className="endpoint-url font-mono">{anprEndpoint}</div>
-                  <p className="endpoint-sub">
-                    Checkpoint-optimized inference. Suppresses non-vehicular detections to maximize OCR framerate and plate accuracy.
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => copyToClipboard(anprEndpoint, 'anpr')}
-                  className="copy-btn"
-                  title="Copy Full URL"
-                >
-                  {copiedEndpoint === 'anpr' ? 'Copied ✓' : 'Copy'}
                 </button>
               </div>
             </div>

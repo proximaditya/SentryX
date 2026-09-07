@@ -42,7 +42,7 @@ export function Workbench() {
   const [hoveredMidpoint, setHoveredMidpoint] = useState(null); // { edgeIndex: number, x: number, y: number }
 
   // Processing configuration
-  const [maxDuration, setMaxDuration] = useState(120);
+  const [maxDuration, setMaxDuration] = useState(15);
   const [nightMode, setNightMode] = useState(false);
   const [enableAnpr, setEnableAnpr] = useState(true);
 
@@ -141,14 +141,11 @@ export function Workbench() {
     }
 
     const phases = [
-      { at: 0, text: 'Transmitting encrypted surveillance stream to Edge Gateway…' },
-      { at: 3, text: 'YOLOv8 neural network isolating multi-class detections…' },
-      { at: 7, text: 'ByteTrack Engine associating tracks across temporal frames…' },
-      { at: 12, text: pipelineMode === 'full' 
-        ? 'Spatial vector geometry engine checking perimeter & tripwire crossings…' 
-        : 'Checkpoint OCR filter suppressing non-vehicular clutter…' },
-      { at: 17, text: 'Neural OCR network deciphering vehicle license plates…' },
-      { at: 22, text: 'Compiling H.264 annotated video & decoding telemetry headers…' },
+      { at: 0, text: 'Uploading surveillance video to Edge Gateway…' },
+      { at: 2, text: 'YOLO11n isolating human & vehicle detections (2x frame stride)…' },
+      { at: 5, text: 'ByteTrack associating spatial tracking vectors…' },
+      { at: 8, text: 'Spatial vector engine checking fence polygons & tripwires…' },
+      { at: 12, text: 'Ultrafast H.264 rendering & decoding telemetry headers…' },
     ];
 
     setProgressPhase(phases[0].text);
@@ -480,35 +477,25 @@ export function Workbench() {
     setError('');
     setResult(null);
 
-    if (!file && !youtubeUrl.trim()) {
-      setError('Please provide a surveillance video file (.mp4, .avi, .mov) or a public YouTube link.');
+    if (!file) {
+      setError('Please select or drop a surveillance video file (.mp4, .avi, .mov) to run edge analytics.');
       return;
     }
 
     const form = new FormData();
 
-    // Video Source
-    if (file) {
-      form.append('video_file', file);
-    } else {
-      form.append('youtube_url', youtubeUrl.trim());
-    }
+    // Required Video File
+    form.append('video_file', file);
 
-    // Geometry parameters (Checklist Item 1: Omit if undefined / empty)
-    if (pipelineMode === 'full') {
-      const zones = exportPayload();
-      if (zones.fence_polygon) form.append('fence_polygon', zones.fence_polygon);
-      if (zones.tripwire_line) form.append('tripwire_line', zones.tripwire_line);
-    }
+    // Optional Geometries (omitted if unconfigured)
+    const zones = exportPayload();
+    if (zones.fence_polygon) form.append('fence_polygon', zones.fence_polygon);
+    if (zones.tripwire_line) form.append('tripwire_line', zones.tripwire_line);
 
-    // Analytics flags
-    form.append('enable_anpr', String(enableAnpr));
-    form.append('night_mode', String(nightMode));
-    form.append('max_duration', String(maxDuration));
+    // Max processing duration (capped at 60s for ultra-low latency)
+    form.append('max_duration', String(Math.min(60, maxDuration)));
 
-    const targetEndpoint = pipelineMode === 'full' 
-      ? `${baseUrl}/api/v1/analytics/full` 
-      : `${baseUrl}/api/v1/analytics/anpr`;
+    const targetEndpoint = `${baseUrl}/api/v1/analytics/full`;
 
     setProcessing(true);
 
@@ -519,6 +506,9 @@ export function Workbench() {
       });
 
       if (!response.ok) {
+        if (response.status === 502 || response.status === 524) {
+          throw new Error(`HTTP ${response.status} (${response.statusText || 'Bad Gateway / Timeout'}): The backend in Kaggle took longer than Cloudflare's timeout, or Uvicorn is restarting. Try setting Max Duration to 15s or uploading a shorter clip.`);
+        }
         throw new Error(`Inference pipeline returned HTTP ${response.status} (${response.statusText || 'Error'})`);
       }
 
@@ -551,7 +541,12 @@ export function Workbench() {
         timestamp: new Date().toLocaleTimeString(),
       });
     } catch (err) {
-      setError(err.message || 'Failed to communicate with the IBVAP analytics gateway.');
+      const msg = err.message || '';
+      if (msg.includes('Failed to fetch') || msg.includes('NetworkError') || msg.includes('502')) {
+        setError(msg || 'HTTP 502 Bad Gateway: Kaggle backend timed out (>100s) or Uvicorn is still loading EasyOCR/YOLO. Please wait 30s after running the cell, set Max Duration to 15s, and try again.');
+      } else {
+        setError(err.message || 'Failed to communicate with the IBVAP analytics gateway.');
+      }
     } finally {
       setProcessing(false);
     }
@@ -588,33 +583,16 @@ export function Workbench() {
         </div>
       </div>
 
-      {/* Mode Selector Tabs */}
-      <div className="pipeline-mode-tabs">
-        <button
-          type="button"
-          className={`mode-tab ${pipelineMode === 'full' ? 'active' : ''}`}
-          onClick={() => setPipelineMode('full')}
-        >
+      {/* Unified Master Defense Pipeline Banner */}
+      <div className="pipeline-mode-tabs" style={{ gridTemplateColumns: '1fr' }}>
+        <div className="mode-tab active" style={{ cursor: 'default' }}>
           <span className="mode-icon">🛡️</span>
           <div>
-            <b>Master Defense Pipeline</b>
-            <small>YOLOv8 + ByteTrack + ANPR + Fence & Tripwire</small>
+            <b>Master Defense Pipeline (v2.0 Clean Edge)</b>
+            <small>YOLO11n + ByteTrack Multi-Object Tracking + Spatial Fence & Tripwire Intrusion (2x Stride)</small>
           </div>
-          <span className="mode-badge">/api/v1/analytics/full</span>
-        </button>
-
-        <button
-          type="button"
-          className={`mode-tab ${pipelineMode === 'anpr' ? 'active' : ''}`}
-          onClick={() => setPipelineMode('anpr')}
-        >
-          <span className="mode-icon">⚡</span>
-          <div>
-            <b>Dedicated ANPR Checkpoint</b>
-            <small>High-speed vehicle plate inference (clutter suppressed)</small>
-          </div>
-          <span className="mode-badge">/api/v1/analytics/anpr</span>
-        </button>
+          <span className="mode-badge">POST /api/v1/analytics/full</span>
+        </div>
       </div>
 
       <form className="workbench-grid" onSubmit={runAnalytics}>
@@ -779,8 +757,8 @@ export function Workbench() {
               </div>
             ) : (
               <>
-                <b>Drop a Surveillance Video</b>
-                <small>MP4, AVI or MOV · up to 500 MB</small>
+                <b>Drop a Surveillance Video File</b>
+                <small>MP4, AVI or MOV · Direct Video Ingestion</small>
               </>
             )}
             <input
@@ -790,50 +768,18 @@ export function Workbench() {
             />
           </label>
 
-          <div className="or-divider">
-            <span>or stream from YouTube URL</span>
-          </div>
-
-          <input
-            className="text-input"
-            value={youtubeUrl}
-            onChange={(e) => setYoutubeUrl(e.target.value)}
-            placeholder="https://www.youtube.com/watch?v=…"
-          />
-
           <label className="range-label">
-            <span>Max Analysis Duration</span>
+            <span>Max Analysis Duration (15–30s optimal)</span>
             <output>{maxDuration}s</output>
             <input
               type="range"
-              min="10"
-              max="480"
-              step="10"
+              min="5"
+              max="60"
+              step="5"
               value={maxDuration}
               onChange={(e) => setMaxDuration(Number(e.target.value))}
             />
           </label>
-
-          <div className="switches">
-            <label>
-              <input
-                type="checkbox"
-                checked={enableAnpr}
-                onChange={(e) => setEnableAnpr(e.target.checked)}
-              />
-              <span />
-              Vehicle ANPR Recognition
-            </label>
-            <label>
-              <input
-                type="checkbox"
-                checked={nightMode}
-                onChange={(e) => setNightMode(e.target.checked)}
-              />
-              <span />
-              Night Mode (Dynamic CLAHE)
-            </label>
-          </div>
 
           {error && <div className="error-message">⚠️ {error}</div>}
 
