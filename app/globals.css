@@ -160,3 +160,9 @@
   .settings-header{flex-direction:column;align-items:stretch}
 }
 
+/* Demo Platform Page */
+.demo-header{margin-bottom:10px}
+.demo-gateway-bar{display:flex;align-items:center;flex-wrap:wrap;gap:12px;margin-top:22px;padding:12px 18px;background:#fffdf7;border:1px solid var(--line);border-radius:10px;font-size:12.5px}
+.demo-gateway-bar span:nth-child(2){font-weight:600;color:var(--muted)}
+
+

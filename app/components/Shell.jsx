@@ -7,6 +7,7 @@ import { useApiConfig } from '../lib/apiConfig';
 
 const links = [
   ['Overview', '/'],
+  ['Live Demo', '/demo'],
   ['Platform', '/platform'],
   ['Solutions', '/solutions'],
   ['Pricing', '/pricing'],
